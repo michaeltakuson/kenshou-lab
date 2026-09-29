@@ -1,6 +1,14 @@
-.code-editor {
+.code-editor-wrapper {
+  display: flex;
+  flex-direction: column;
   height: 100%;
   min-height: 200px;
+  gap: 6px;
+}
+
+.code-editor {
+  flex: 1;
+  min-height: 160px;
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
@@ -14,4 +22,35 @@
 .code-editor .cm-editor.cm-focused {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
+}
+
+.code-editor__symbol-bar {
+  display: none;
+}
+
+/* スマホ幅でのみ、フォーカス中に記号バーを出す(SPEC.md第11章) */
+@media (max-width: 899px) {
+  .code-editor__symbol-bar {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 4px;
+    padding: 4px;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+}
+
+.code-editor__symbol-key {
+  flex: 0 0 auto;
+  min-width: 36px;
+  min-height: 40px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  font-family: ui-monospace, SFMono-Regular, Consolas, Menlo, monospace;
+  font-size: 0.95rem;
+  cursor: pointer;
 }

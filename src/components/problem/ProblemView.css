@@ -6,6 +6,10 @@
   min-height: 0;
 }
 
+.problem-view__modify-task .rpl {
+  min-height: 420px;
+}
+
 .problem-view__predict {
   display: flex;
   flex-direction: column;

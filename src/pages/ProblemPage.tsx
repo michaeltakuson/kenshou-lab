@@ -67,16 +67,33 @@ export function ProblemPage() {
         難易度: {DIFFICULTY_LABEL[problem.difficulty]} ・ 目安時間: 約{problem.estimatedMinutes}分 ・
         形式: {TYPE_LABEL[problem.type]}
       </div>
-      <MarkdownView source={problem.prompt} className="problem-page__prompt" />
 
       {(problem.type === 'write' || problem.type === 'fix') && (
-        <WriteFixProblemView key={problem.id} setId={set.setId} problem={problem} datasets={datasets} />
+        <WriteFixProblemView
+          key={problem.id}
+          setId={set.setId}
+          problem={problem}
+          datasets={datasets}
+          promptNode={<MarkdownView source={problem.prompt} className="problem-page__prompt" />}
+        />
       )}
       {problem.type === 'read' && (
-        <ReadProblemView key={problem.id} setId={set.setId} problem={problem} datasets={datasets} />
+        <ReadProblemView
+          key={problem.id}
+          setId={set.setId}
+          problem={problem}
+          datasets={datasets}
+          promptNode={<MarkdownView source={problem.prompt} className="problem-page__prompt" />}
+        />
       )}
       {problem.type === 'explain' && (
-        <ExplainProblemView key={problem.id} setId={set.setId} problem={problem} datasets={datasets} />
+        <ExplainProblemView
+          key={problem.id}
+          setId={set.setId}
+          problem={problem}
+          datasets={datasets}
+          promptNode={<MarkdownView source={problem.prompt} className="problem-page__prompt" />}
+        />
       )}
     </div>
   );

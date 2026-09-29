@@ -74,3 +74,38 @@
   margin-top: 12px;
   color: #16a34a;
 }
+
+.settings-page__radio-group {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.settings-page__radio-group label,
+.settings-page__checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+}
+
+.settings-page section input[type='number'] {
+  font-size: 16px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  width: 80px;
+  margin-right: 6px;
+}
+
+.settings-page__danger {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: none;
+  background: var(--error-fg);
+  color: #fff;
+  cursor: pointer;
+}

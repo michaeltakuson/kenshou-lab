@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CodeEditor } from '../CodeEditor';
 import { ResultPanel } from '../ResultPanel';
 import { HintsPanel } from './HintsPanel';
 import { StuckNoteInput } from './StuckNoteInput';
+import { ResponsiveProblemLayout } from './ResponsiveProblemLayout';
 import { getPyodideClient } from '../../pyodide/client';
 import type { DatasetSource, PyStatus, RunResult } from '../../pyodide/types';
 import type { WriteOrFixProblem } from '../../problems/types';
@@ -22,17 +23,20 @@ import { useWorkingTime } from '../../records/workTime';
 import { logEvent } from '../../records/eventLog';
 import { STATE_LABELS } from '../../records/stateLabels';
 import type { ProblemProgress } from '../../records/types';
+import { usePrefs } from '../../prefs/prefs';
 import './ProblemView.css';
 
 interface Props {
   setId: string;
   problem: WriteOrFixProblem;
   datasets: DatasetSource[];
+  promptNode: ReactNode;
 }
 
-export function WriteFixProblemView({ setId, problem, datasets }: Props) {
+export function WriteFixProblemView({ setId, problem, datasets, promptNode }: Props) {
   const [searchParams] = useSearchParams();
   const isReview = searchParams.get('review') === '1';
+  const [prefs] = usePrefs();
 
   const [progress, setProgress] = useState<ProblemProgress | null>(null);
   const [code, setCode] = useState(problem.starterCode);
@@ -72,7 +76,7 @@ export function WriteFixProblemView({ setId, problem, datasets }: Props) {
     code,
     setupCode: problem.setup,
     datasets,
-    timeoutSec: problem.timeoutSec,
+    timeoutSec: problem.timeoutSec ?? prefs.defaultTimeoutSec,
   };
 
   const persistCode = (next: string) => {
@@ -88,7 +92,7 @@ export function WriteFixProblemView({ setId, problem, datasets }: Props) {
   };
 
   const handleRun = async () => {
-    if (blockedByPredict) return;
+    if (blockedByPredict || isBusy) return;
     await lockPredictIfNeeded();
     await logEvent(setId, problem.id, 'run');
     const r = await client.run(runOptions);
@@ -97,7 +101,7 @@ export function WriteFixProblemView({ setId, problem, datasets }: Props) {
   };
 
   const handleSubmit = async () => {
-    if (blockedByPredict) return;
+    if (blockedByPredict || isBusy) return;
     await lockPredictIfNeeded();
     await logEvent(setId, problem.id, 'submit');
     const r = await client.run({ ...runOptions, tests: problem.tests });
@@ -124,8 +128,7 @@ export function WriteFixProblemView({ setId, problem, datasets }: Props) {
   };
 
   const failThreshold = problem.answerUnlockAfterFails ?? 3;
-  const answerUnlocked =
-    progress.hintsOpenedCount >= problem.hints.length || progress.failCount >= failThreshold;
+  const answerUnlocked = progress.hintsOpenedCount >= problem.hints.length || progress.failCount >= failThreshold;
 
   const handleViewAnswer = async () => {
     const next = await recordAnswerViewed(setId, problem.id);
@@ -133,11 +136,13 @@ export function WriteFixProblemView({ setId, problem, datasets }: Props) {
     setConfirmingAnswer(false);
   };
 
-  const showStuckNote = progress.state === 'cleared_alone' || progress.state === 'cleared_by_review' || progress.answerViewed;
+  const showStuckNote =
+    progress.state === 'cleared_alone' || progress.state === 'cleared_by_review' || progress.answerViewed;
 
-  return (
-    <div className="problem-view">
+  const problemPane = (
+    <>
       <div className="problem-view__state-badge">{STATE_LABELS[progress.state]}</div>
+      {promptNode}
       {problem.predict && (
         <div className="problem-view__predict">
           <label htmlFor="predict-input">
@@ -152,34 +157,13 @@ export function WriteFixProblemView({ setId, problem, datasets }: Props) {
           />
         </div>
       )}
-      <div className="problem-view__body">
-        <div className="problem-view__editor">
-          <CodeEditor value={code} onChange={persistCode} ariaLabel="コード入力欄" />
-          <div className="problem-view__actions">
-            <button type="button" onClick={handleRun} disabled={isBusy || blockedByPredict}>
-              実行
-            </button>
-            <button type="button" onClick={handleSubmit} disabled={isBusy || blockedByPredict}>
-              提出
-            </button>
-            <button type="button" className="problem-view__reset" onClick={handleResetCode} disabled={isBusy}>
-              初期コードに戻す
-            </button>
-          </div>
-          {blockedByPredict && <p className="problem-view__note">先に上の予想欄を入力してください。</p>}
-        </div>
-        <div className="problem-view__result">
-          <ResultPanel result={result} status={status} />
-          {problem.predict && predictLocked && result && !result.timedOut && (
-            <div className="problem-view__predict-compare">
-              <div className="result-block__title">あなたの予想</div>
-              <pre className="result-pre">{predictText || '(未入力)'}</pre>
-            </div>
-          )}
-        </div>
-      </div>
+      {blockedByPredict && <p className="problem-view__note">先に上の予想欄を入力してください。</p>}
 
-      <HintsPanel hints={problem.hints} openedCount={progress.hintsOpenedCount} onOpenNext={() => handleOpenHint(progress.hintsOpenedCount)} />
+      <HintsPanel
+        hints={problem.hints}
+        openedCount={progress.hintsOpenedCount}
+        onOpenNext={() => handleOpenHint(progress.hintsOpenedCount)}
+      />
 
       {progress.answerViewed ? (
         <div className="problem-view__answer-reveal">
@@ -222,6 +206,46 @@ export function WriteFixProblemView({ setId, problem, datasets }: Props) {
           onSave={(note) => void recordStuckNote(setId, problem.id, note)}
         />
       )}
-    </div>
+    </>
+  );
+
+  return (
+    <ResponsiveProblemLayout
+      problemPane={problemPane}
+      codePane={
+        <CodeEditor
+          value={code}
+          onChange={persistCode}
+          ariaLabel="コード入力欄"
+          wrap={prefs.codeWrap}
+          onRunShortcut={handleRun}
+          onSubmitShortcut={handleSubmit}
+        />
+      }
+      resultPane={
+        <>
+          <ResultPanel result={result} status={status} />
+          {problem.predict && predictLocked && result && !result.timedOut && (
+            <div className="problem-view__predict-compare">
+              <div className="result-block__title">あなたの予想</div>
+              <pre className="result-pre">{predictText || '(未入力)'}</pre>
+            </div>
+          )}
+        </>
+      }
+      actions={
+        <>
+          <button type="button" onClick={handleRun} disabled={isBusy || blockedByPredict}>
+            実行
+          </button>
+          <button type="button" onClick={handleSubmit} disabled={isBusy || blockedByPredict}>
+            提出
+          </button>
+          <button type="button" className="problem-view__reset" onClick={handleResetCode} disabled={isBusy}>
+            初期コードに戻す
+          </button>
+        </>
+      }
+    />
   );
 }

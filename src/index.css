@@ -23,8 +23,13 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/*
+ * テーマは既定でOSの設定(prefers-color-scheme)に追従する。
+ * 設定画面で「ライト」「ダーク」に固定すると、<html>にdata-theme属性が付き、
+ * 下の明示指定がOS設定より優先される。
+ */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --fg: #e8e8ec;
     --bg: #14151a;
     --border: #34353f;
@@ -34,6 +39,28 @@
     --error-fg: #ffb4b4;
     --warn-bg: #332a12;
   }
+}
+
+:root[data-theme='dark'] {
+  --fg: #e8e8ec;
+  --bg: #14151a;
+  --border: #34353f;
+  --code-bg: #1e1f27;
+  --accent: #c4b5fd;
+  --error-bg: #3a1a1a;
+  --error-fg: #ffb4b4;
+  --warn-bg: #332a12;
+}
+
+:root[data-theme='light'] {
+  --fg: #1a1a1a;
+  --bg: #ffffff;
+  --border: #d8d8de;
+  --code-bg: #f4f3ec;
+  --accent: #6d28d9;
+  --error-bg: #fdecec;
+  --error-fg: #9f1c1c;
+  --warn-bg: #fff8e1;
 }
 
 * {

@@ -63,3 +63,11 @@ export function getDb(): Promise<IDBPDatabase<KenshouDB>> {
   }
   return dbPromise;
 }
+
+/** 設定画面の「全データ削除」から呼ぶ。呼び出し側で2段階確認を行うこと。 */
+export async function clearAllData(): Promise<void> {
+  const db = await getDb();
+  await Promise.all(
+    (['localProblemSets', 'progress', 'events', 'timeLog', 'meta'] as const).map((name) => db.clear(name)),
+  );
+}

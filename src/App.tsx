@@ -5,9 +5,11 @@ import { ProblemSetListPage } from './pages/ProblemSetListPage';
 import { ProblemSetPage } from './pages/ProblemSetPage';
 import { ProblemPage } from './pages/ProblemPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { usePrefs } from './prefs/prefs';
 import './App.css';
 
 export default function App() {
+  usePrefs();
   return (
     <HashRouter>
       <div className="app-shell">

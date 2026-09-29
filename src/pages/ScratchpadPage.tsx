@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { CodeEditor } from '../components/CodeEditor';
 import { ResultPanel } from '../components/ResultPanel';
 import { getPyodideClient } from '../pyodide/client';
+import { usePrefs } from '../prefs/prefs';
 import type { PyStatus, RunResult } from '../pyodide/types';
 import './ScratchpadPage.css';
 
@@ -25,6 +26,7 @@ export function ScratchpadPage() {
   const [result, setResult] = useState<RunResult | null>(null);
   const client = getPyodideClient();
   const [status, setStatus] = useState<PyStatus>(() => client.getStatus());
+  const [prefs] = usePrefs();
 
   useEffect(() => client.onStatus(setStatus), [client]);
 
@@ -39,7 +41,8 @@ export function ScratchpadPage() {
   const isBusy = status.phase === 'loading' || status.phase === 'running' || status.phase === 'restarting';
 
   const handleRun = async () => {
-    const r = await client.run({ code, timeoutSec: 10 });
+    if (isBusy) return;
+    const r = await client.run({ code, timeoutSec: prefs.defaultTimeoutSec });
     setResult(r);
   };
 
@@ -54,7 +57,13 @@ export function ScratchpadPage() {
       </div>
       <div className="scratchpad-page__body">
         <div className="scratchpad-page__editor">
-          <CodeEditor value={code} onChange={setCode} ariaLabel="自由実行コード入力欄" />
+          <CodeEditor
+            value={code}
+            onChange={setCode}
+            ariaLabel="自由実行コード入力欄"
+            wrap={prefs.codeWrap}
+            onRunShortcut={handleRun}
+          />
           <div className="scratchpad-page__actions">
             <button type="button" onClick={handleRun} disabled={isBusy}>
               実行

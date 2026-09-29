@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CodeEditor } from '../CodeEditor';
 import { ResultPanel } from '../ResultPanel';
 import { HintsPanel } from './HintsPanel';
 import { StuckNoteInput } from './StuckNoteInput';
+import { ResponsiveProblemLayout } from './ResponsiveProblemLayout';
 import { getPyodideClient } from '../../pyodide/client';
 import type { DatasetSource, PyStatus, RunResult } from '../../pyodide/types';
 import type { ExplainProblem } from '../../problems/types';
@@ -19,12 +20,14 @@ import { useWorkingTime } from '../../records/workTime';
 import { logEvent } from '../../records/eventLog';
 import { STATE_LABELS } from '../../records/stateLabels';
 import type { ExplainBlockState, ProblemProgress } from '../../records/types';
+import { usePrefs } from '../../prefs/prefs';
 import './ProblemView.css';
 
 interface Props {
   setId: string;
   problem: ExplainProblem;
   datasets: DatasetSource[];
+  promptNode: ReactNode;
 }
 
 const UNFINALIZED_STATES = new Set(['not_started', 'in_progress']);
@@ -49,6 +52,7 @@ function ModifyTaskView({
   onPassed: () => void;
 }) {
   const modifyTask = problem.modifyTask;
+  const [prefs] = usePrefs();
   const [code, setCode] = useState(initialCode);
   const [result, setResult] = useState<RunResult | null>(null);
   const client = getPyodideClient();
@@ -65,18 +69,25 @@ function ModifyTaskView({
   };
 
   const handleRun = async () => {
+    if (isBusy) return;
     await logEvent(setId, problem.id, 'run', { context: 'modifyTask' });
-    const r = await client.run({ code, setupCode: problem.setup, datasets, timeoutSec: problem.timeoutSec });
+    const r = await client.run({
+      code,
+      setupCode: problem.setup,
+      datasets,
+      timeoutSec: problem.timeoutSec ?? prefs.defaultTimeoutSec,
+    });
     setResult(r);
     if (r.error) await logEvent(setId, problem.id, 'error', { name: r.error.name, context: 'modifyTask' });
   };
   const handleSubmit = async () => {
+    if (isBusy) return;
     await logEvent(setId, problem.id, 'submit', { context: 'modifyTask' });
     const r = await client.run({
       code,
       setupCode: problem.setup,
       datasets,
-      timeoutSec: problem.timeoutSec,
+      timeoutSec: problem.timeoutSec ?? prefs.defaultTimeoutSec,
       tests: modifyTask.tests,
     });
     setResult(r);
@@ -86,32 +97,41 @@ function ModifyTaskView({
   };
 
   return (
-    <div className="problem-view__block">
+    <div className="problem-view__block problem-view__modify-task">
       <div className="problem-view__block-title">改変課題</div>
       <p>{modifyTask.prompt}</p>
-      <div className="problem-view__body">
-        <div className="problem-view__editor">
-          <CodeEditor value={code} onChange={update} ariaLabel="改変課題コード入力欄" />
-          <div className="problem-view__actions">
+      <ResponsiveProblemLayout
+        problemPane={<p className="problem-view__note">左のコードを直接編集し、実行・提出してください。</p>}
+        codePane={
+          <CodeEditor
+            value={code}
+            onChange={update}
+            ariaLabel="改変課題コード入力欄"
+            wrap={prefs.codeWrap}
+            onRunShortcut={handleRun}
+            onSubmitShortcut={handleSubmit}
+          />
+        }
+        resultPane={<ResultPanel result={result} status={status} />}
+        actions={
+          <>
             <button type="button" onClick={handleRun} disabled={isBusy}>
               実行
             </button>
             <button type="button" onClick={handleSubmit} disabled={isBusy}>
               提出
             </button>
-          </div>
-        </div>
-        <div className="problem-view__result">
-          <ResultPanel result={result} status={status} />
-        </div>
-      </div>
+          </>
+        }
+      />
     </div>
   );
 }
 
-export function ExplainProblemView({ setId, problem, datasets }: Props) {
+export function ExplainProblemView({ setId, problem, datasets, promptNode }: Props) {
   const [searchParams] = useSearchParams();
   const isReview = searchParams.get('review') === '1';
+  const [prefs] = usePrefs();
 
   const [progress, setProgress] = useState<ProblemProgress | null>(null);
   const [blocks, setBlocks] = useState<ExplainBlockState[]>(() => emptyBlockState(problem));
@@ -186,8 +206,9 @@ export function ExplainProblemView({ setId, problem, datasets }: Props) {
   return (
     <div className="problem-view">
       <div className="problem-view__state-badge">{STATE_LABELS[progress.state]}</div>
+      {promptNode}
       <div className="problem-view__code-readonly">
-        <CodeEditor value={problem.code} onChange={() => {}} readOnly ariaLabel="説明対象コード" />
+        <CodeEditor value={problem.code} onChange={() => {}} readOnly ariaLabel="説明対象コード" wrap={prefs.codeWrap} />
       </div>
 
       <HintsPanel
