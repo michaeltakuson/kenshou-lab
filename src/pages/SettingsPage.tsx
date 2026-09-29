@@ -4,6 +4,7 @@ import { createProblemSetValidator, type ValidationIssue } from '../lib/schemaVa
 import { hasLocalProblemSet, saveLocalProblemSet } from '../problems/localStore';
 import { clearAllData } from '../db/db';
 import { usePrefs } from '../prefs/prefs';
+import { backupFileName, exportBackup, importBackup, type BackupData, type ImportSummary } from '../backup/backup';
 import type { ProblemSet } from '../problems/types';
 import './SettingsPage.css';
 
@@ -21,6 +22,10 @@ export function SettingsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [prefs, setPref] = usePrefs();
   const [deleteStep, setDeleteStep] = useState<0 | 1 | 2>(0);
+  const restoreInputRef = useRef<HTMLInputElement>(null);
+  const [restoreSummary, setRestoreSummary] = useState<ImportSummary | null>(null);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+  const [exportDone, setExportDone] = useState(false);
 
   const tryImport = async (raw: string) => {
     let data: unknown;
@@ -61,6 +66,33 @@ export function SettingsPage() {
     if (state.phase !== 'confirm-overwrite') return;
     await saveLocalProblemSet(state.set);
     setState({ phase: 'done', setId: state.set.setId });
+  };
+
+  const handleExport = async () => {
+    const data = await exportBackup();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = backupFileName(data.exportedAt);
+    a.click();
+    URL.revokeObjectURL(url);
+    setExportDone(true);
+    setTimeout(() => setExportDone(false), 3000);
+  };
+
+  const handleRestoreFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setRestoreError(null);
+    setRestoreSummary(null);
+    file
+      .text()
+      .then((content) => JSON.parse(content) as BackupData)
+      .then((data) => importBackup(data))
+      .then((summary) => setRestoreSummary(summary))
+      .catch((err: Error) => setRestoreError(`復元できませんでした: ${err.message}`));
+    e.target.value = '';
   };
 
   return (
@@ -178,6 +210,31 @@ export function SettingsPage() {
           />
           秒
         </label>
+      </section>
+
+      <section className="settings-page__section">
+        <h2>バックアップと復元</h2>
+        <p className="settings-page__hint">
+          この端末の進捗・記録・実働時間・ローカルの問題セットを1つのJSONファイルに書き出せます。
+          別の端末で「復元」すると、両方の記録が重複なく統合されます(上書きではありません)。
+        </p>
+        <div className="settings-page__actions">
+          <button type="button" onClick={() => void handleExport()}>
+            {exportDone ? '書き出しました' : 'バックアップを書き出す'}
+          </button>
+          <button type="button" onClick={() => restoreInputRef.current?.click()}>
+            復元する
+          </button>
+          <input ref={restoreInputRef} type="file" accept="application/json" hidden onChange={handleRestoreFile} />
+        </div>
+        {restoreError && <p className="settings-page__issues">{restoreError}</p>}
+        {restoreSummary && (
+          <p className="settings-page__success">
+            復元しました(追加したイベント: {restoreSummary.addedEvents}件、重複でスキップ:{' '}
+            {restoreSummary.skippedDuplicateEvents}件、更新した進捗: {restoreSummary.upsertedProgress}件、
+            問題セット: {restoreSummary.upsertedProblemSets}件)。
+          </p>
+        )}
       </section>
 
       <section className="settings-page__section">

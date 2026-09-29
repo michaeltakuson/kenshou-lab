@@ -107,6 +107,7 @@ export async function finalizeCycle(
 ): Promise<ProblemProgress> {
   const p = await getProgress(setId, problemId);
   const now = new Date();
+  const wasReview = p.reviewStage >= 1 && p.reviewStage <= 4;
 
   if (p.reviewStage === 0) {
     if (outcome === 'clean') {
@@ -136,7 +137,13 @@ export async function finalizeCycle(
   p.answerViewed = false;
   p.updatedAt = now.toISOString();
   await saveProgress(p);
-  await logEvent(setId, problemId, 'pass', { outcome, reviewStage: p.reviewStage, state: p.state });
+  await logEvent(setId, problemId, 'pass', {
+    outcome,
+    reviewStage: p.reviewStage,
+    state: p.state,
+    wasReview,
+    reviewSuccess: wasReview ? outcome === 'clean' : undefined,
+  });
   return p;
 }
 

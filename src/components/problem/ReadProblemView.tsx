@@ -81,7 +81,10 @@ export function ReadProblemView({ setId, problem, datasets, promptNode }: Props)
 
   const handleAnswer = async () => {
     if (!canAnswer || isBusy || hasAnswered) return;
-    await logEvent(setId, problem.id, 'submit', { answer: userInput });
+    const isFirstAttempt = firstJudgement === null;
+    if (!isFirstAttempt) {
+      await logEvent(setId, problem.id, 'submit', { answer: userInput, retry: true });
+    }
     const r = await client.run({
       code: problem.code,
       setupCode: problem.setup,
@@ -93,6 +96,12 @@ export function ReadProblemView({ setId, problem, datasets, promptNode }: Props)
     if (firstJudgement === null && r.ok) {
       const correct = judgeReadAnswer(problem.answer, userInput, actualOutputTextOf(r));
       setFirstJudgement(correct);
+      // 「予想が外れたもの」レポート用に、1回目の予想と実際の出力をまとめて記録する。
+      await logEvent(setId, problem.id, 'submit', {
+        answer: userInput,
+        actualOutput: actualOutputTextOf(r),
+        correct,
+      });
       if (!wasAlreadyFinalized) {
         const outcome = correct && progress.hintsOpenedCount === 0 ? 'clean' : 'needed_help';
         const next = await finalizeCycle(setId, problem.id, outcome);
