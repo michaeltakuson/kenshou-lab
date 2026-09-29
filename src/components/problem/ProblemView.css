@@ -147,6 +147,16 @@
   gap: 6px;
 }
 
+.problem-view__block textarea {
+  font-size: 16px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: inherit;
+}
+
 .problem-view__block-title {
   font-weight: 600;
 }
