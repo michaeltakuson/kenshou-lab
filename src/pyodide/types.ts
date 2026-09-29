@@ -1,4 +1,5 @@
 // 検証ラボ: Pyodide Workerと画面(メインスレッド)の間でやり取りする型。
+import type { TestCase } from '../problems/types';
 
 export interface DatasetSource {
   /** Pyodideの仮想FS上での data/<name> になるファイル名 */
@@ -15,6 +16,15 @@ export interface RunOptions {
   datasets?: DatasetSource[];
   /** 既定10秒。問題ごとに変更可能(第10.3章 timeoutSec)。 */
   timeoutSec?: number;
+  /** 指定すると「提出」として採点まで行う。省略すると「実行」(採点なし)。 */
+  tests?: TestCase[];
+}
+
+export interface TestOutcome {
+  name: string;
+  passed: boolean;
+  message: string | null;
+  kind: 'assertion_failed' | 'grading_error' | null;
 }
 
 export type ResultValue =
@@ -44,6 +54,10 @@ export interface RunResult {
   value: ResultValue;
   figures: string[];
   error?: RunError;
+  /** tests未指定なら空配列、指定していれば各テストの結果 */
+  testResults: TestOutcome[];
+  /** tests未指定ならnull、指定していれば全テスト合格かどうか */
+  allPassed: boolean | null;
   /** メインスレッド側でタイムアウトと判断した場合にtrueを立てて埋め込む */
   timedOut?: boolean;
   timeoutSec?: number;

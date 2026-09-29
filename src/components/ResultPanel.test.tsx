@@ -23,6 +23,8 @@ describe('ResultPanel', () => {
       stderr: '',
       value: null,
       figures: [],
+      testResults: [],
+      allPassed: null,
       timedOut: true,
       timeoutSec: 10,
     };
@@ -38,6 +40,8 @@ describe('ResultPanel', () => {
       stderr: '',
       value: null,
       figures: [],
+      testResults: [],
+      allPassed: null,
       error: {
         name: 'KeyError',
         message: "'x'",
@@ -69,10 +73,36 @@ describe('ResultPanel', () => {
         truncated: false,
       },
       figures: ['data:image/png;base64,AAAA'],
+      testResults: [],
+      allPassed: null,
     };
     render(<ResultPanel result={result} status={READY} />);
     expect(screen.getByText('hello')).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'a' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: '図1' })).toBeInTheDocument();
+  });
+
+  it('採点結果はテストごとの合否とメッセージを表示し、テストコード自体は表示しない', () => {
+    const result: RunResult = {
+      ok: true,
+      stdout: '',
+      stderr: '',
+      value: null,
+      figures: [],
+      testResults: [
+        { name: 'shapeが正しい', passed: true, message: null, kind: null },
+        {
+          name: '列名が正しい',
+          passed: false,
+          message: '列名がおかしいようです。',
+          kind: 'assertion_failed',
+        },
+      ],
+      allPassed: false,
+    };
+    render(<ResultPanel result={result} status={READY} />);
+    expect(screen.getByText(/不合格の項目があります/)).toBeInTheDocument();
+    expect(screen.getByText('shapeが正しい')).toBeInTheDocument();
+    expect(screen.getByText('列名がおかしいようです。')).toBeInTheDocument();
   });
 });

@@ -51,6 +51,26 @@ function ValueView({ value }: { value: RunResult['value'] }) {
   );
 }
 
+function TestResultsView({ result }: { result: RunResult }) {
+  if (result.allPassed === null) return null;
+  return (
+    <div className={`result-block result-tests ${result.allPassed ? 'result-tests--pass' : 'result-tests--fail'}`}>
+      <div className="result-block__title">
+        採点結果: {result.allPassed ? 'すべて合格' : '不合格の項目があります'}
+      </div>
+      <ul className="result-tests__list">
+        {result.testResults.map((t, i) => (
+          <li key={i} className={t.passed ? 'result-tests__item--pass' : 'result-tests__item--fail'}>
+            <span className="result-tests__mark">{t.passed ? '合格' : '不合格'}</span>
+            <span className="result-tests__name">{t.name}</span>
+            {!t.passed && t.message && <p className="result-tests__message">{t.message}</p>}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function ErrorView({ error }: { error: NonNullable<RunResult['error']> }) {
   const [showTraceback, setShowTraceback] = useState(false);
   return (
@@ -131,6 +151,7 @@ export function ResultPanel({ result, status }: ResultPanelProps) {
 
   return (
     <div className="result-panel">
+      <TestResultsView result={result} />
       {!result.ok && result.error && <ErrorView error={result.error} />}
       {result.stdout && (
         <div className="result-block">
@@ -156,6 +177,7 @@ export function ResultPanel({ result, status }: ResultPanelProps) {
         </div>
       )}
       {result.ok &&
+        result.allPassed === null &&
         !result.stdout &&
         !result.stderr &&
         result.value === null &&

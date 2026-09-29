@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CodeEditor } from '../components/CodeEditor';
 import { ResultPanel } from '../components/ResultPanel';
 import { getPyodideClient } from '../pyodide/client';
@@ -23,13 +23,10 @@ function loadDraft(): string {
 export function ScratchpadPage() {
   const [code, setCode] = useState(loadDraft);
   const [result, setResult] = useState<RunResult | null>(null);
-  const [status, setStatus] = useState<PyStatus>({ phase: 'loading', message: '準備中…' });
-  const clientRef = useRef(getPyodideClient());
+  const client = getPyodideClient();
+  const [status, setStatus] = useState<PyStatus>(() => client.getStatus());
 
-  useEffect(() => {
-    const client = clientRef.current;
-    return client.onStatus(setStatus);
-  }, []);
+  useEffect(() => client.onStatus(setStatus), [client]);
 
   useEffect(() => {
     try {
@@ -42,7 +39,6 @@ export function ScratchpadPage() {
   const isBusy = status.phase === 'loading' || status.phase === 'running' || status.phase === 'restarting';
 
   const handleRun = async () => {
-    const client = clientRef.current;
     const r = await client.run({ code, timeoutSec: 10 });
     setResult(r);
   };

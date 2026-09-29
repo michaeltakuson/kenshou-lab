@@ -1,0 +1,209 @@
+{
+  "schemaVersion": 1,
+  "setId": "sample",
+  "title": "サンプル問題セット(動作確認用)",
+  "milestone": "M1",
+  "unit": 1,
+  "description": "検証ラボの動作確認用サンプルです。学習本編の問題ではありません。4つの形式(書く/読む/直す/説明する)と、pandas・matplotlib・statsmodels・scikit-learnの一通りの動作を確認できます。",
+  "packages": ["pandas", "matplotlib", "statsmodels", "scikit-learn"],
+  "datasets": [
+    { "name": "sales.csv", "path": "data/sample/sales.csv" },
+    { "name": "tiny.csv", "inline": "a,b\n1,2\n3,4\n" }
+  ],
+  "problems": [
+    {
+      "id": "sample-p01",
+      "type": "write",
+      "title": "カテゴリごとの売上合計を求める",
+      "prompt": "`df` には次の列があります: `date`, `category`, `quantity`, `price`, `sales`。\n\n`category` 列ごとに `sales` 列の合計を求めて、`category_sales` という名前のSeriesに代入してください。",
+      "difficulty": 1,
+      "estimatedMinutes": 8,
+      "tags": ["pandas", "groupby"],
+      "hints": [
+        "まず `df` の中身をそのまま実行して表示し、どんな列があるか確認してみましょう。",
+        "pandasの `groupby` メソッドを使うと、列の値ごとにグループ分けして集計できます。",
+        "`df.groupby(\"category\")[\"sales\"].sum()` のように書けます。"
+      ],
+      "setup": "import pandas as pd\ndf = pd.read_csv(\"data/sales.csv\")",
+      "starterCode": "# category列ごとに sales の合計を求めて\n# category_sales という名前の変数に代入してください\n\n",
+      "tests": [
+        {
+          "name": "category_salesが定義されている",
+          "code": "assert \"category_sales\" in globals(), \"category_sales という名前の変数が見つかりません。\"",
+          "message": "category_sales という名前の変数を作ってください。"
+        },
+        {
+          "name": "内容が正しい",
+          "code": "expected = df.groupby(\"category\")[\"sales\"].sum()\nassert_series_equal(category_sales.sort_index(), expected.sort_index(), check_names=False)",
+          "message": "category_sales の中身が正しくないようです。groupbyとsumを使って集計してください。"
+        }
+      ],
+      "modelAnswer": "category_sales = df.groupby(\"category\")[\"sales\"].sum()",
+      "modelExplanation": [
+        { "lines": [1, 1], "text": "category列の値ごとにdfをグループ分けする準備をしています。" },
+        { "lines": [1, 1], "text": "sales列を取り出し、グループごとに合計しています。" }
+      ]
+    },
+    {
+      "id": "sample-p02",
+      "type": "write",
+      "title": "quantityのヒストグラムを描く",
+      "prompt": "`quantity` 列の分布を確認するため、ヒストグラムを1枚描いてください。`plt.hist(...)` を使います。\n\n図の見た目そのものは採点されません。図が1枚以上描かれているかどうかで判定します。",
+      "difficulty": 1,
+      "estimatedMinutes": 5,
+      "tags": ["matplotlib", "可視化"],
+      "hints": [
+        "matplotlib.pyplot の `hist` 関数を使うとヒストグラムが描けます。",
+        "`plt.hist(df[\"quantity\"])` のように書けます。"
+      ],
+      "setup": "import pandas as pd\nimport matplotlib.pyplot as plt\ndf = pd.read_csv(\"data/sales.csv\")",
+      "starterCode": "# quantity列のヒストグラムを描いてください\n\n",
+      "tests": [
+        {
+          "name": "図が1枚以上ある",
+          "code": "assert _figures >= 1, \"図が描かれていないようです。plt.hist()などでグラフを作成してください。\"",
+          "message": "図が描かれていないようです。plt.hist()などでグラフを作成してください。"
+        }
+      ],
+      "modelAnswer": "plt.hist(df[\"quantity\"])"
+    },
+    {
+      "id": "sample-p03",
+      "type": "read",
+      "title": "行数を予想する",
+      "prompt": "次のコードを実行すると、何が表示されるか予想してください。",
+      "difficulty": 1,
+      "estimatedMinutes": 3,
+      "tags": ["read_csv", "予想"],
+      "hints": [
+        "`len(df)` は df の行数を返します。",
+        "サンプルデータ(sales.csv)の行数を数えてみましょう。"
+      ],
+      "code": "import pandas as pd\ndf = pd.read_csv(\"data/sales.csv\")\nprint(len(df))",
+      "answer": { "kind": "output" }
+    },
+    {
+      "id": "sample-p04",
+      "type": "read",
+      "title": "小さな表の合計を予想する",
+      "prompt": "次のコードを実行すると、`result` の値はどうなるでしょうか。選択肢から選んでください。",
+      "difficulty": 1,
+      "estimatedMinutes": 3,
+      "tags": ["pandas", "予想", "選択式"],
+      "hints": ["tiny.csv の中身は a,b の2列で、それぞれ2行のデータです。"],
+      "code": "import pandas as pd\ntiny = pd.read_csv(\"data/tiny.csv\")\nresult = tiny[\"a\"].sum() + tiny[\"b\"].sum()\nprint(result)",
+      "answer": { "kind": "choice", "choices": ["6", "10", "4", "14"], "correct": 1 }
+    },
+    {
+      "id": "sample-p05",
+      "type": "fix",
+      "title": "10個以上売れた行を取り出す(バグ修正)",
+      "prompt": "`quantity` が10以上(10を含む)の行だけを取り出して `rows` に代入したいのですが、下のコードにはバグがあります。直してください。",
+      "difficulty": 2,
+      "estimatedMinutes": 6,
+      "tags": ["pandas", "比較演算子", "直す"],
+      "hints": [
+        "「10以上」には10自身も含まれます。",
+        "比較演算子(`>` と `>=`)の違いを確認してみましょう。"
+      ],
+      "setup": "import pandas as pd\ndf = pd.read_csv(\"data/sales.csv\")",
+      "starterCode": "# quantityが10以上の行を rows に代入してください\nrows = df[df[\"quantity\"] > 10]\n",
+      "tests": [
+        {
+          "name": "10以上の行がすべて含まれる",
+          "code": "expected = df[df[\"quantity\"] >= 10]\nassert_frame_equal(rows.reset_index(drop=True), expected.reset_index(drop=True))",
+          "message": "quantityが10以上(10を含む)の行を取り出せていないようです。比較演算子を確認してください。"
+        }
+      ],
+      "modelAnswer": "rows = df[df[\"quantity\"] >= 10]"
+    },
+    {
+      "id": "sample-p06",
+      "type": "explain",
+      "title": "一番売上の多いカテゴリを求めるコードを読む",
+      "prompt": "次のコードが何をしているか、ブロックごとに自分の言葉で説明してください。",
+      "difficulty": 2,
+      "estimatedMinutes": 10,
+      "tags": ["pandas", "説明する"],
+      "hints": ["idxmax()は、値が最大になる場所のインデックス(ここではcategory名)を返します。"],
+      "code": "import pandas as pd\ndf = pd.read_csv(\"data/sales.csv\")\ntotals = df.groupby(\"category\")[\"sales\"].sum()\ntop = totals.idxmax()\nprint(top)",
+      "blocks": [
+        { "lines": [1, 2], "modelText": "pandasを読み込み、sales.csvを読み込んでdfに代入しています。" },
+        { "lines": [3, 3], "modelText": "category列ごとにsales列を合計し、totalsという名前のSeriesに代入しています。" },
+        { "lines": [4, 4], "modelText": "totalsの中で一番値が大きい(売上が多い)categoryの名前を取り出しています。" },
+        { "lines": [5, 5], "modelText": "その結果(一番売上が多いcategory名)を表示しています。" }
+      ],
+      "modifyTask": {
+        "prompt": "一番売上が「少ない」categoryを表示するように、コードを1箇所変えてください。",
+        "tests": [
+          {
+            "name": "一番売上が少ないcategoryになっている",
+            "code": "expected = df.groupby(\"category\")[\"sales\"].sum().idxmin()\nassert top == expected, \"一番売上が少ないcategoryになっていないようです。\"",
+            "message": "一番売上が少ないcategoryになっていないようです。idxmaxをidxminに変えてみましょう。"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sample-p07",
+      "type": "write",
+      "title": "statsmodelsで単回帰し、傾きを取り出す",
+      "prompt": "`quantity` を説明変数、`sales` を目的変数として、statsmodelsで単回帰(定数項あり)を行い、`quantity` の係数(傾き)を `slope` という変数に代入してください。",
+      "difficulty": 2,
+      "estimatedMinutes": 10,
+      "tags": ["statsmodels", "回帰", "予想"],
+      "predict": {
+        "question": "quantityの係数(傾き)はプラスになるでしょうか、マイナスになるでしょうか。",
+        "required": true
+      },
+      "hints": [
+        "`sm.add_constant(df[\"quantity\"])` で定数項を追加したXを作れます。",
+        "`sm.OLS(y, X).fit()` でモデルを学習できます。",
+        "学習後のモデルの `.params` に係数が入っています。"
+      ],
+      "setup": "import numpy as np\nimport pandas as pd\nimport statsmodels.api as sm\ndf = pd.read_csv(\"data/sales.csv\")",
+      "starterCode": "# X(説明変数)にquantity、y(目的変数)にsalesを使い、\n# 定数項を加えたOLSで回帰し、quantityの係数を slope に代入してください。\n\n",
+      "tests": [
+        {
+          "name": "slopeが定義されている",
+          "code": "assert \"slope\" in globals(), \"slope という名前の変数が見つかりません。\"",
+          "message": "slope という名前の変数を作ってください。"
+        },
+        {
+          "name": "slopeの値が正しい",
+          "code": "X = sm.add_constant(df[\"quantity\"])\nmodel = sm.OLS(df[\"sales\"], X).fit()\nexpected_slope = model.params[\"quantity\"]\nassert isclose(slope, expected_slope, rel_tol=1e-6), \"quantityの係数が正しくないようです。\"",
+          "message": "quantityの係数が正しくないようです。sm.OLSの使い方を確認してください。"
+        }
+      ],
+      "modelAnswer": "X = sm.add_constant(df[\"quantity\"])\nmodel = sm.OLS(df[\"sales\"], X).fit()\nslope = model.params[\"quantity\"]"
+    },
+    {
+      "id": "sample-p08",
+      "type": "write",
+      "title": "scikit-learnで回帰モデルを学習する",
+      "prompt": "scikit-learnの `LinearRegression` を使い、`quantity` から `sales` を予測するモデルを学習して、`reg` という変数に代入してください。",
+      "difficulty": 2,
+      "estimatedMinutes": 8,
+      "tags": ["scikit-learn", "回帰"],
+      "hints": [
+        "説明変数は2次元の表の形(DataFrame)である必要があります。`df[[\"quantity\"]]` のように2重の角括弧を使います。",
+        "`LinearRegression().fit(X, y)` で学習できます。"
+      ],
+      "setup": "import numpy as np\nimport pandas as pd\nfrom sklearn.linear_model import LinearRegression\ndf = pd.read_csv(\"data/sales.csv\")",
+      "starterCode": "# LinearRegression()を使い、quantityからsalesを予測するモデルを\n# reg に代入し、fit()まで行ってください。\n\n",
+      "tests": [
+        {
+          "name": "regが学習済みモデルである",
+          "code": "assert hasattr(reg, \"coef_\"), \"reg が学習済みのモデルになっていないようです(fit()を呼びましたか?)。\"",
+          "message": "reg が学習済みのモデルになっていないようです(fit()を呼びましたか?)。"
+        },
+        {
+          "name": "傾きの値が正しい",
+          "code": "X = df[[\"quantity\"]]\ny = df[\"sales\"]\nexpected = LinearRegression().fit(X, y)\nassert isclose(float(reg.coef_[0]), float(expected.coef_[0]), rel_tol=1e-6), \"傾きの値が正しくないようです。\"",
+          "message": "傾きの値が正しくないようです。"
+        }
+      ],
+      "modelAnswer": "X = df[[\"quantity\"]]\ny = df[\"sales\"]\nreg = LinearRegression().fit(X, y)"
+    }
+  ]
+}

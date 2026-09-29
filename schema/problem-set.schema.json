@@ -1,0 +1,226 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kenshou-lab.local/schema/problem-set.schema.json",
+  "title": "検証ラボ 問題セット",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "setId", "title", "milestone", "unit", "problems"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "setId": { "type": "string", "minLength": 1, "pattern": "^[a-zA-Z0-9_-]+$" },
+    "title": { "type": "string", "minLength": 1 },
+    "milestone": { "type": "string", "enum": ["M1", "M2", "M3", "M4"] },
+    "unit": { "type": "integer", "minimum": 1 },
+    "description": { "type": "string" },
+    "packages": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "datasets": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/dataset" }
+    },
+    "problems": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/problem" }
+    }
+  },
+  "definitions": {
+    "dataset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "path": { "type": "string", "minLength": 1 },
+        "inline": { "type": "string" }
+      },
+      "oneOf": [
+        { "required": ["path"], "not": { "required": ["inline"] } },
+        { "required": ["inline"], "not": { "required": ["path"] } }
+      ]
+    },
+    "lineRange": {
+      "type": "array",
+      "items": { "type": "integer", "minimum": 1 },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "testCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "code", "message"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "code": { "type": "string", "minLength": 1 },
+        "message": { "type": "string", "minLength": 1 }
+      }
+    },
+    "modelExplanationEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lines", "text"],
+      "properties": {
+        "lines": { "$ref": "#/definitions/lineRange" },
+        "text": { "type": "string", "minLength": 1 }
+      }
+    },
+    "predict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["question"],
+      "properties": {
+        "question": { "type": "string", "minLength": 1 },
+        "required": { "type": "boolean" }
+      }
+    },
+    "answer": {
+      "type": "object",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": { "kind": { "const": "output" } }
+        },
+        {
+          "additionalProperties": false,
+          "required": ["kind", "choices", "correct"],
+          "properties": {
+            "kind": { "const": "choice" },
+            "choices": {
+              "type": "array",
+              "minItems": 2,
+              "items": { "type": "string", "minLength": 1 }
+            },
+            "correct": { "type": "integer", "minimum": 0 }
+          }
+        },
+        {
+          "additionalProperties": false,
+          "required": ["kind", "value"],
+          "properties": {
+            "kind": { "const": "value" },
+            "value": {},
+            "tolerance": { "type": "number", "minimum": 0 }
+          }
+        }
+      ]
+    },
+    "modifyTask": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prompt", "tests"],
+      "properties": {
+        "prompt": { "type": "string", "minLength": 1 },
+        "tests": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/testCase" }
+        }
+      }
+    },
+    "block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lines", "modelText"],
+      "properties": {
+        "lines": { "$ref": "#/definitions/lineRange" },
+        "modelText": { "type": "string", "minLength": 1 }
+      }
+    },
+    "problemCommon": {
+      "type": "object",
+      "required": ["id", "type", "title", "prompt", "difficulty", "estimatedMinutes", "tags", "hints"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "pattern": "^[a-zA-Z0-9_-]+$" },
+        "type": { "type": "string", "enum": ["write", "read", "fix", "explain"] },
+        "title": { "type": "string", "minLength": 1 },
+        "prompt": { "type": "string", "minLength": 1 },
+        "difficulty": { "type": "integer", "enum": [1, 2, 3] },
+        "estimatedMinutes": { "type": "integer", "minimum": 1 },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "timeoutSec": { "type": "integer", "minimum": 1, "maximum": 120 },
+        "hints": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "answerUnlockAfterFails": { "type": "integer", "minimum": 1 },
+        "setup": { "type": "string" },
+        "predict": { "$ref": "#/definitions/predict" }
+      }
+    },
+    "problem": {
+      "allOf": [
+        { "$ref": "#/definitions/problemCommon" },
+        {
+          "if": {
+            "properties": { "type": { "const": "write" } }
+          },
+          "then": {
+            "additionalProperties": false,
+            "properties": {
+              "id": true, "type": true, "title": true, "prompt": true, "difficulty": true,
+              "estimatedMinutes": true, "tags": true, "timeoutSec": true, "hints": true,
+              "answerUnlockAfterFails": true, "setup": true, "predict": true,
+              "starterCode": { "type": "string" },
+              "tests": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/testCase" } },
+              "modelAnswer": { "type": "string", "minLength": 1 },
+              "modelExplanation": { "type": "array", "items": { "$ref": "#/definitions/modelExplanationEntry" } }
+            },
+            "required": ["starterCode", "tests", "modelAnswer"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "fix" } }
+          },
+          "then": {
+            "additionalProperties": false,
+            "properties": {
+              "id": true, "type": true, "title": true, "prompt": true, "difficulty": true,
+              "estimatedMinutes": true, "tags": true, "timeoutSec": true, "hints": true,
+              "answerUnlockAfterFails": true, "setup": true, "predict": true,
+              "starterCode": { "type": "string" },
+              "tests": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/testCase" } },
+              "modelAnswer": { "type": "string", "minLength": 1 },
+              "modelExplanation": { "type": "array", "items": { "$ref": "#/definitions/modelExplanationEntry" } }
+            },
+            "required": ["starterCode", "tests", "modelAnswer"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "read" } }
+          },
+          "then": {
+            "additionalProperties": false,
+            "properties": {
+              "id": true, "type": true, "title": true, "prompt": true, "difficulty": true,
+              "estimatedMinutes": true, "tags": true, "timeoutSec": true, "hints": true,
+              "answerUnlockAfterFails": true, "setup": true, "predict": true,
+              "code": { "type": "string", "minLength": 1 },
+              "answer": { "$ref": "#/definitions/answer" },
+              "modelExplanation": { "type": "array", "items": { "$ref": "#/definitions/modelExplanationEntry" } }
+            },
+            "required": ["code", "answer"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "explain" } }
+          },
+          "then": {
+            "additionalProperties": false,
+            "properties": {
+              "id": true, "type": true, "title": true, "prompt": true, "difficulty": true,
+              "estimatedMinutes": true, "tags": true, "timeoutSec": true, "hints": true,
+              "answerUnlockAfterFails": true, "setup": true, "predict": true,
+              "code": { "type": "string", "minLength": 1 },
+              "blocks": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/block" } },
+              "modifyTask": { "$ref": "#/definitions/modifyTask" }
+            },
+            "required": ["code", "blocks"]
+          }
+        }
+      ]
+    }
+  }
+}

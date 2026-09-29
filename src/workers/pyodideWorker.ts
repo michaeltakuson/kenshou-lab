@@ -73,6 +73,8 @@ function internalErrorResult(e: unknown): RunResult {
     stderr: '',
     value: null,
     figures: [],
+    testResults: [],
+    allPassed: null,
     error: {
       name: 'InternalError',
       message,
@@ -86,12 +88,13 @@ function internalErrorResult(e: unknown): RunResult {
 self.onmessage = async (ev: MessageEvent) => {
   const msg = ev.data;
   if (msg?.type !== 'run') return;
-  const { id, code, setupCode, datasets } = msg as { id: string } & RunOptions;
+  const { id, code, setupCode, datasets, tests } = msg as { id: string } & RunOptions;
   try {
     const pyodide = await getPyodide();
     await writeDatasets(pyodide, datasets);
-    const runFn = pyodide.globals.get('__kenshou_run');
-    const resultJson: string = runFn(setupCode ?? '', code ?? '');
+    const runFn = pyodide.globals.get('__kenshou_execute');
+    const testsJson = JSON.stringify(tests ?? null);
+    const resultJson: string = runFn(setupCode ?? '', code ?? '', testsJson);
     runFn.destroy();
     const result = JSON.parse(resultJson) as RunResult;
     post({ type: 'run-result', id, result });

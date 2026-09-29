@@ -1,0 +1,38 @@
+.markdown-view {
+  line-height: 1.7;
+  overflow-wrap: break-word;
+}
+
+.markdown-view :first-child {
+  margin-top: 0;
+}
+
+.markdown-view pre {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.markdown-view code {
+  font-family: ui-monospace, SFMono-Regular, Consolas, Menlo, monospace;
+}
+
+.markdown-view table {
+  border-collapse: collapse;
+  max-width: 100%;
+  overflow-x: auto;
+  display: block;
+}
+
+.markdown-view th,
+.markdown-view td {
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+}
+
+.markdown-view img {
+  max-width: 100%;
+}

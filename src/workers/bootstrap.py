@@ -92,6 +92,7 @@ def _format_error(exc, primary_filename):
 
 
 def _capture_figures():
+    """図をPNG画像化する(採点コードが_figuresで図の枚数を見られるよう、ここでは閉じない)。"""
     images = []
     for num in plt.get_fignums():
         fig = plt.figure(num)
@@ -100,7 +101,6 @@ def _capture_figures():
         images.append(
             "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
         )
-    plt.close("all")
     return images
 
 
@@ -139,7 +139,11 @@ def _reset_global_state():
     plt.close("all")
     matplotlib.rcParams.update(rcParamsDefault)
     matplotlib.use("AGG")
-    pd.reset_option("all")
+    with warnings.catch_warnings():
+        # pd.reset_option("all")は非推奨オプションについてもFutureWarningを出すが、
+        # これは利用者のコードと無関係なリセット処理自体の警告なので黙らせる。
+        warnings.simplefilter("ignore", FutureWarning)
+        pd.reset_option("all")
     warnings.resetwarnings()
     np.random.seed()
     random.seed()
@@ -157,12 +161,55 @@ def _base_namespace():
     }
 
 
-def __kenshou_run(setup_code, user_code):
+def _run_tests(ns, tests):
+    """採点コード(tests)を利用者コードと同じ名前空間で実行する(SPEC.md第5章)。
+
+    テストの中身(assertの期待値など)は利用者に見せない。AssertionErrorは
+    不合格として message を見せ、それ以外の例外は「採点中にエラー」として
+    区別する(テストコード自体の不具合を利用者のミスと混同させないため)。
+    """
+    test_results = []
+    all_passed = True
+    for i, t in enumerate(tests):
+        name = t.get("name", f"test{i + 1}")
+        try:
+            exec(compile(t["code"], f"<test:{name}>", "exec"), ns)
+            test_results.append({"name": name, "passed": True, "message": None, "kind": None})
+        except AssertionError:
+            all_passed = False
+            test_results.append(
+                {
+                    "name": name,
+                    "passed": False,
+                    "message": t.get("message", "不合格でした。"),
+                    "kind": "assertion_failed",
+                }
+            )
+        except Exception as e:  # noqa: BLE001 - テストコード側の不具合も利用者に伝える必要がある
+            all_passed = False
+            test_results.append(
+                {
+                    "name": name,
+                    "passed": False,
+                    "message": f"採点中にエラーが発生しました({type(e).__name__}: {e})",
+                    "kind": "grading_error",
+                }
+            )
+    return test_results, all_passed
+
+
+def __kenshou_execute(setup_code, user_code, tests_json):
+    """setup->利用者コードを実行し、tests_jsonが与えられれば続けて採点する。
+
+    tests_jsonが文字列"null"(JSONのnull)のときは採点を行わない(「実行」ボタン用)。
+    それ以外は第10.4章のtests配列のJSON文字列を渡す(「提出」ボタン用)。
+    戻り値はJSON文字列(dict)。
+    """
     _reset_global_state()
     ns = _base_namespace()
     stdout_buf = io.StringIO()
     stderr_buf = io.StringIO()
-    result = {"ok": True}
+    result = {"ok": True, "testResults": [], "allPassed": None}
 
     try:
         with contextlib.redirect_stdout(stdout_buf), contextlib.redirect_stderr(
@@ -190,5 +237,20 @@ def __kenshou_run(setup_code, user_code):
 
     result["stdout"] = stdout_buf.getvalue()
     result["stderr"] = stderr_buf.getvalue()
-    result["figures"] = _capture_figures()
+    figures = _capture_figures()
+    result["figures"] = figures
+
+    tests = json.loads(tests_json)
+    if tests is not None:
+        if result["ok"]:
+            ns["_stdout"] = result["stdout"]
+            ns["_figures"] = len(figures)
+            test_results, all_passed = _run_tests(ns, tests)
+            result["testResults"] = test_results
+            result["allPassed"] = all_passed
+        else:
+            result["testResults"] = []
+            result["allPassed"] = False
+
+    plt.close("all")
     return json.dumps(result, ensure_ascii=False)

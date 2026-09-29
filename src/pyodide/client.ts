@@ -24,6 +24,7 @@ export class PyodideClient {
   private readyResolve: (() => void) | null = null;
   private readyPromise: Promise<void>;
   private pending: PendingRun | null = null;
+  private currentStatus: PyStatus = { phase: 'loading', message: '起動しています…' };
 
   constructor() {
     this.readyPromise = new Promise((resolve) => {
@@ -32,12 +33,25 @@ export class PyodideClient {
     this.spawnWorker();
   }
 
+  /**
+   * 現在の状態を返す。
+   *
+   * onStatusは「今後の変化」しか通知しないため、Workerが既に準備完了した後で
+   * 新しい画面(問題を切り替えた先の別コンポーネントなど)が購読を始めても、
+   * その画面はイベントを受け取れず「準備中」のまま止まってしまう。
+   * 購読開始時にこれで現在値を取得し、状態のstateを初期化すること。
+   */
+  getStatus(): PyStatus {
+    return this.currentStatus;
+  }
+
   onStatus(fn: StatusListener): () => void {
     this.listeners.add(fn);
     return () => this.listeners.delete(fn);
   }
 
   private emit(status: PyStatus) {
+    this.currentStatus = status;
     for (const fn of this.listeners) fn(status);
   }
 
@@ -111,6 +125,8 @@ export class PyodideClient {
             stderr: '',
             value: null,
             figures: [],
+            testResults: [],
+            allPassed: null,
             error: {
               name: 'InternalError',
               message: '実行エンジンの準備ができていません。',
@@ -132,6 +148,8 @@ export class PyodideClient {
             stderr: '',
             value: null,
             figures: [],
+            testResults: [],
+            allPassed: null,
             timedOut: true,
             timeoutSec,
           });
@@ -144,6 +162,7 @@ export class PyodideClient {
           code: options.code,
           setupCode: options.setupCode ?? '',
           datasets: options.datasets ?? [],
+          tests: options.tests,
         });
       })();
     });

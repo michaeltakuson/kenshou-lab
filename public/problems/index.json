@@ -1,0 +1,10 @@
+[
+  {
+    "setId": "sample",
+    "title": "サンプル問題セット(動作確認用)",
+    "milestone": "M1",
+    "unit": 1,
+    "description": "検証ラボの動作確認用サンプルです。学習本編の問題ではありません。4つの形式(書く/読む/直す/説明する)と、pandas・matplotlib・statsmodels・scikit-learnの一通りの動作を確認できます。",
+    "problemCount": 8
+  }
+]

@@ -9,6 +9,9 @@ export function HomePage() {
         フェーズ3で実装します(SPEC.md 第2章・第8章)。
       </p>
       <p>
+        <Link to="/sets">問題セット一覧へ →</Link>
+      </p>
+      <p>
         <Link to="/scratchpad">自由実行(スクラッチパッド)へ →</Link>
       </p>
     </div>

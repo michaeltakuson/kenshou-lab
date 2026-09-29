@@ -1,0 +1,76 @@
+.settings-page {
+  padding: 16px;
+  max-width: 720px;
+}
+
+.settings-page__section {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  margin-top: 16px;
+}
+
+.settings-page__hint {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.settings-page__textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: ui-monospace, SFMono-Regular, Consolas, Menlo, monospace;
+  font-size: 14px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--code-bg);
+  color: var(--fg);
+}
+
+.settings-page__actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.settings-page__actions button {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+.settings-page__actions .settings-page__cancel {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--fg);
+}
+
+.settings-page__issues {
+  margin-top: 12px;
+  background: var(--error-bg);
+  color: var(--error-fg);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.settings-page__issues ul {
+  margin: 6px 0 0;
+  padding-left: 20px;
+}
+
+.settings-page__confirm {
+  margin-top: 12px;
+  background: var(--warn-bg);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.settings-page__success {
+  margin-top: 12px;
+  color: #16a34a;
+}
