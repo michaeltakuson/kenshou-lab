@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CodeEditor } from '../CodeEditor';
 import { ResultPanel } from '../ResultPanel';
@@ -46,6 +46,7 @@ export function WriteFixProblemView({ setId, problem, datasets, promptNode }: Pr
   const client = getPyodideClient();
   const [status, setStatus] = useState<PyStatus>(() => client.getStatus());
   const [confirmingAnswer, setConfirmingAnswer] = useState(false);
+  const draftSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useWorkingTime(setId, problem.id);
   useEffect(() => client.onStatus(setStatus), [client]);
@@ -81,7 +82,12 @@ export function WriteFixProblemView({ setId, problem, datasets, promptNode }: Pr
 
   const persistCode = (next: string) => {
     setCode(next);
-    void saveDraftCode(setId, problem.id, next);
+    // キー入力のたびにIndexedDBへ読み書きすると、書き込み順の競合や
+    // 反映の遅れにつながるため、入力が少し止まってからまとめて保存する。
+    if (draftSaveTimerRef.current) clearTimeout(draftSaveTimerRef.current);
+    draftSaveTimerRef.current = setTimeout(() => {
+      void saveDraftCode(setId, problem.id, next);
+    }, 400);
   };
 
   const lockPredictIfNeeded = async () => {

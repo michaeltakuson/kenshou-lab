@@ -13,7 +13,8 @@ import {
   markOpened,
   recordHintOpened,
   recordStuckNote,
-  saveProgress,
+  saveExplainState,
+  saveModifyTaskCode,
   startReviewAttempt,
 } from '../../records/progressStore';
 import { useWorkingTime } from '../../records/workTime';
@@ -166,7 +167,7 @@ export function ExplainProblemView({ setId, problem, datasets, promptNode }: Pro
     setBlocks(next);
     const p = { ...progress, explainState: next, updatedAt: new Date().toISOString() };
     setProgress(p);
-    await saveProgress(p);
+    await saveExplainState(p);
   };
 
   const maybeFinalize = async (nextBlocks: ExplainBlockState[], modifyPassed: boolean) => {
@@ -277,7 +278,7 @@ export function ExplainProblemView({ setId, problem, datasets, promptNode }: Pro
           onCodeChange={(code) => {
             const p = { ...progress, modifyTaskCode: code, updatedAt: new Date().toISOString() };
             setProgress(p);
-            void saveProgress(p);
+            void saveModifyTaskCode(p);
           }}
           onPassed={handleModifyTaskPassed}
         />
