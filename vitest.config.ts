@@ -6,5 +6,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    // e2e/ はPlaywrightのテストなのでVitestの対象から除外する
+    exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
   },
 });

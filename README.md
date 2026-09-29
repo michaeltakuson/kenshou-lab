@@ -1,32 +1,79 @@
-# React + TypeScript + Vite
+# 検証ラボ（kenshou-lab）
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Pythonによるデータ分析を「予想 → 実行 → 検証」の形で練習するための、個人用の学習Webアプリです。
+すべてブラウザの中だけで動き、サーバーは使いません（コードの実行は[Pyodide](https://pyodide.org/)でブラウザ上で行います）。
 
-Currently, two official plugins are available:
+- 公開URL: `https://<ユーザー名>.github.io/kenshou-lab/`（公開後にこの行を実際のURLに書き換えます）
+- 詳しい仕様は [SPEC.md](./SPEC.md)、問題の作り方は [docs/PROBLEM_FORMAT.md](./docs/PROBLEM_FORMAT.md) を参照してください。
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## できること
 
-## React Compiler
+- 「書く」「読む」「直す」「説明する」の4形式で、pandas・numpy・matplotlib・scipy・statsmodels・scikit-learnの問題を解く
+- 実行前に結果を予想し、実行後に実際の結果と並べて確認する
+- ヒントを段階的に開き、条件を満たすと模範解答を確認できる
+- 進捗・詰まりメモ・実働時間を自動で記録し、間隔反復（1→3→7→14日）で復習できる
+- 週次レポートをワンタップでコピーし、チャット側のAIに学習状況を共有できる
+- 進捗データをバックアップ・復元でき、パソコンとスマホの記録を統合できる
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 使い方
 
-## Expanding the Oxlint configuration
+### パソコン（Chromeなど）で使う場合
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+上記の公開URLを開くだけです。初回はPythonの実行環境（Pyodide）の読み込みに時間がかかりますが、
+2回目以降はブラウザのキャッシュにより速くなります。
+コード入力欄では `Ctrl+Enter`（Macは`Cmd+Enter`）で実行、`Ctrl+Shift+Enter`で提出できます。
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+### スマホ（iOS Safari / Androidのブラウザ）で使う場合
+
+同じURLをブラウザで開きます。画面幅に応じて「問題／コード／結果」のタブ切り替えになり、
+実行・提出ボタンは画面下部に固定されます。コード入力中は、よく使う記号（`( ) [ ] { } : ' " = . , _ # + - * / < >`など）
+を並べたバーが表示されます。
+
+### 注意点
+
+- 進捗・記録・書きかけのコードは、**その端末のブラウザの中だけ**に保存されます（サーバーには送信されません）。
+- ブラウザによっては長期間使わないとデータが消えることがあります。設定画面から**定期的にバックアップ**を取ることをおすすめします。
+- パソコンとスマホの記録を1つにまとめたい場合は、設定画面の「バックアップを書き出す」→もう一方の端末で「復元する」を行ってください（上書きではなく、重複なく統合されます）。
+
+## 問題セットの追加方法
+
+問題はチャット側のAI（Claude.aiなど）がJSON形式で作成します。追加する方法は2つあります。
+
+1. **リポジトリ経由（恒久・全端末共通）**: `public/problems/<setId>.json` にファイルを置いてpushする。
+   一覧はビルド時に自動生成されるため、手動での一覧更新は不要。
+2. **貼り付け経由（即時・その端末のみ）**: アプリの「設定」画面でJSONを貼り付けるか、ファイルを選んで追加する。
+   この端末にのみ保存され、一覧では「ローカル」と表示される。
+
+詳しいフォーマットは [docs/PROBLEM_FORMAT.md](./docs/PROBLEM_FORMAT.md) を参照してください。
+
+問題の採点コードや模範解答は、このリポジトリが公開リポジトリであるため誰でも閲覧できます。
+これは自習用アプリとしての仕様上、意図的に許容しています。
+
+## ローカルでの起動方法
+
+```bash
+npm ci
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+`http://localhost:5173`（ポートが埋まっている場合は別のポート）で開きます。
+
+### そのほかのコマンド
+
+```bash
+npm run validate   # public/problems/ 以下の問題セットをスキーマ検証し、模範解答が実際に合格するか確認する
+npm run test       # ユニットテスト(Vitest)
+npm run test:e2e   # E2Eテスト(Playwright。PC幅・スマホ幅の両方で動作確認)
+npm run build      # 型チェック + 本番ビルド
+```
+
+## 技術構成
+
+Vite + React + TypeScript の静的サイトです。Pythonの実行はPyodide（Web Worker内）、
+データの保存はIndexedDB、問題文はMarkdown + KaTeX、コードエディタはCodeMirror 6を使っています。
+サーバー・アカウント・自動同期の機能はなく、GitHub Actionsで push のたびに検証・テスト・ビルドを行い、
+GitHub Pagesへ自動デプロイします。
+
+## ライセンス
+
+[MIT License](./LICENSE)

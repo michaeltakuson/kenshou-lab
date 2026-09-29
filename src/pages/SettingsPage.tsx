@@ -125,6 +125,7 @@ export function SettingsPage() {
             accept="application/json"
             hidden
             onChange={handleFileChange}
+            data-testid="import-problemset-file"
           />
         </div>
 
@@ -225,7 +226,14 @@ export function SettingsPage() {
           <button type="button" onClick={() => restoreInputRef.current?.click()}>
             復元する
           </button>
-          <input ref={restoreInputRef} type="file" accept="application/json" hidden onChange={handleRestoreFile} />
+          <input
+            ref={restoreInputRef}
+            type="file"
+            accept="application/json"
+            hidden
+            onChange={handleRestoreFile}
+            data-testid="restore-backup-file"
+          />
         </div>
         {restoreError && <p className="settings-page__issues">{restoreError}</p>}
         {restoreSummary && (
