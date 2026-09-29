@@ -73,7 +73,8 @@ export type PyStatus =
   | { phase: 'loading'; message: string }
   | { phase: 'ready' }
   | { phase: 'running' }
-  // タイムアウトで停止した「理由」と、Workerを作り直している「再準備中」は
-  // 同時に見えている必要がある(片方だけが一瞬表示されて消えると分かりにくいため)。
-  | { phase: 'restarting'; timeoutSec?: number }
+  // タイムアウトで停止した「理由」と、Workerを作り直している「再準備中」の進捗は
+  // 新しいWorkerの準備が整う(readyになる)まで、ずっと同時に見えている必要がある
+  // (最初の一瞬だけ出て、すぐ通常のloadingメッセージに上書きされると分かりにくいため)。
+  | { phase: 'restarting'; timeoutSec: number; message: string }
   | { phase: 'error'; message: string };

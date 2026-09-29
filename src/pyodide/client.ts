@@ -25,6 +25,8 @@ export class PyodideClient {
   private readyPromise: Promise<void>;
   private pending: PendingRun | null = null;
   private currentStatus: PyStatus = { phase: 'loading', message: '起動しています…' };
+  /** タイムアウトによる再生成の最中は、readyになるまでこの理由を表示し続ける。 */
+  private restartTimeoutSec: number | null = null;
 
   constructor() {
     this.readyPromise = new Promise((resolve) => {
@@ -71,9 +73,14 @@ export class PyodideClient {
   private handleMessage(msg: WorkerToMainMessage) {
     switch (msg.type) {
       case 'progress':
-        this.emit({ phase: 'loading', message: msg.message });
+        if (this.restartTimeoutSec !== null) {
+          this.emit({ phase: 'restarting', timeoutSec: this.restartTimeoutSec, message: msg.message });
+        } else {
+          this.emit({ phase: 'loading', message: msg.message });
+        }
         break;
       case 'ready':
+        this.restartTimeoutSec = null;
         this.emit({ phase: 'ready' });
         this.readyResolve?.();
         break;
@@ -106,8 +113,9 @@ export class PyodideClient {
     this.readyPromise = new Promise((resolve) => {
       this.readyResolve = resolve;
     });
-    // 「停止した理由」と「再準備中である」ことを同時に見せる(片方だけ一瞬出て消えると分かりにくいため)。
-    this.emit({ phase: 'restarting', timeoutSec });
+    this.restartTimeoutSec = timeoutSec;
+    // 「停止した理由」と「再準備中である」ことを、新しいWorkerがreadyになるまでずっと同時に見せる。
+    this.emit({ phase: 'restarting', timeoutSec, message: '実行環境を再準備しています…' });
     this.spawnWorker();
   }
 

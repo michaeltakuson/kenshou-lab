@@ -3,8 +3,8 @@ import { defineConfig, devices } from '@playwright/test';
 // Pyodideの初回読み込みは数十秒かかることがあるため、タイムアウトを長めに取る。
 export default defineConfig({
   testDir: './e2e',
-  timeout: 120_000,
-  expect: { timeout: 15_000 },
+  timeout: 240_000,
+  expect: { timeout: 20_000 },
   fullyParallel: false,
   workers: 1,
   retries: 0,

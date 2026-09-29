@@ -16,6 +16,19 @@ describe('ResultPanel', () => {
     expect(screen.getByText(/まだ実行していません/)).toBeInTheDocument();
   });
 
+  it('再準備中は、新しいWorkerの読み込み進捗が来ても停止理由を表示し続ける(回帰テスト)', () => {
+    // 新しいWorkerが最初の進捗を送ってきた後も、
+    // 「なぜ再準備しているか(タイムアウトしたこと)」が消えずに見え続けることを確認する。
+    render(
+      <ResultPanel
+        result={null}
+        status={{ phase: 'restarting', timeoutSec: 10, message: 'Pythonランタイムを準備中です…' }}
+      />,
+    );
+    expect(screen.getByText('10秒を超えたので停止しました。')).toBeInTheDocument();
+    expect(screen.getByText('Pythonランタイムを準備中です…')).toBeInTheDocument();
+  });
+
   it('タイムアウト結果は理由と再準備完了の両方を表示する', () => {
     const result: RunResult = {
       ok: false,

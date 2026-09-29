@@ -4,7 +4,7 @@ import { defineConfig, type Plugin } from 'vite';
 import { generateProblemIndex } from './scripts/problemIndex.js';
 
 function problemIndexPlugin(): Plugin {
-  const problemsDir = resolve(__dirname, 'public/problems');
+  const problemsDir = resolve(import.meta.dirname, 'public/problems');
 
   return {
     name: 'kenshou-lab-problem-index',

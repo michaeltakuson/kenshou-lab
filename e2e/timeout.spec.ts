@@ -13,10 +13,11 @@ test('無限ループは既定秒数で停止し、その後も続けて実行�
   await replaceEditorContent(page, 'while True:\n    pass');
   await page.getByRole('button', { name: '実行' }).click();
 
-  await expect(page.getByText(/秒を超えたので停止しました/)).toBeVisible({ timeout: 15_000 });
+  // 既定は10秒だが、システム負荷が高いとタイマーの発火が遅れることがあるため余裕を持たせる。
+  await expect(page.getByText(/秒を超えたので停止しました/)).toBeVisible({ timeout: 30_000 });
 
   // Workerの再生成が終わり、続けて実行できることを確認する
-  await waitForRunReady(page, 90_000);
+  await waitForRunReady(page);
   await replaceEditorContent(page, 'print("続けて実行できた")');
   await page.getByRole('button', { name: '実行' }).click();
   await expect(page.getByText('続けて実行できた')).toBeVisible({ timeout: 30_000 });

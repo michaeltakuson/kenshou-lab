@@ -104,12 +104,9 @@ export function ResultPanel({ result, status }: ResultPanelProps) {
   if (status.phase === 'restarting') {
     return (
       <div className="result-panel result-panel--status">
-        {status.timeoutSec !== undefined && (
-          <p className="result-error__message">
-            {status.timeoutSec}秒を超えたので停止しました。
-          </p>
-        )}
-        <p className="result-note">実行環境を再準備しています…</p>
+        <p className="result-error__message">{status.timeoutSec}秒を超えたので停止しました。</p>
+        <p>実行環境を再準備しています…</p>
+        <p className="result-note">{status.message}</p>
       </div>
     );
   }

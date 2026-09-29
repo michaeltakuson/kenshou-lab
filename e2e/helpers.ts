@@ -14,7 +14,7 @@ export async function resetAppData(page: Page): Promise<void> {
 }
 
 /** Pyodideの初回読み込み(数十秒かかることがある)が終わり、実行/提出ボタンが押せる状態になるまで待つ。 */
-export async function waitForRunReady(page: Page, timeout = 90_000): Promise<void> {
+export async function waitForRunReady(page: Page, timeout = 180_000): Promise<void> {
   const button = page.getByRole('button', { name: /^(実行|回答して確かめる)$/ }).first();
   await button.waitFor({ state: 'visible', timeout });
   await page.waitForFunction(

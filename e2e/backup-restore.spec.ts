@@ -7,10 +7,13 @@ import { resetAppData, waitForRunReady } from './helpers';
 test('バックアップを書き出して復元すると記録が戻る', async ({ page }) => {
   await resetAppData(page);
 
-  // 読む問題に回答して、記録を1件作る
+  // 読む問題に回答して、記録を1件作る。
+  // 「回答して確かめる」ボタンは、Pyodideの準備ができているだけでなく
+  // 予想欄に何か入力されていないと有効にならない(仕様通り)ため、
+  // 先に予想欄を埋めてからボタンが有効になるのを待つ。
   await page.goto('/#/sets/repo/sample/sample-p03');
-  await waitForRunReady(page);
   await page.getByPlaceholder('実行結果を予想して入力してください').fill('8');
+  await waitForRunReady(page);
   await page.getByRole('button', { name: '回答して確かめる' }).click();
   await expect(page.getByText(/初回の判定/)).toBeVisible({ timeout: 30_000 });
 
