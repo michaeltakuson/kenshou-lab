@@ -30,5 +30,6 @@ function problemIndexPlugin(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/kenshou-lab/',
   plugins: [react(), problemIndexPlugin()],
 });
