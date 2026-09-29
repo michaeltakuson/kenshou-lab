@@ -70,11 +70,13 @@ export function ProblemPage() {
       <MarkdownView source={problem.prompt} className="problem-page__prompt" />
 
       {(problem.type === 'write' || problem.type === 'fix') && (
-        <WriteFixProblemView key={problem.id} problem={problem} datasets={datasets} />
+        <WriteFixProblemView key={problem.id} setId={set.setId} problem={problem} datasets={datasets} />
       )}
-      {problem.type === 'read' && <ReadProblemView key={problem.id} problem={problem} datasets={datasets} />}
+      {problem.type === 'read' && (
+        <ReadProblemView key={problem.id} setId={set.setId} problem={problem} datasets={datasets} />
+      )}
       {problem.type === 'explain' && (
-        <ExplainProblemView key={problem.id} problem={problem} datasets={datasets} />
+        <ExplainProblemView key={problem.id} setId={set.setId} problem={problem} datasets={datasets} />
       )}
     </div>
   );

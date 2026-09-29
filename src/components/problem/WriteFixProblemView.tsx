@@ -1,49 +1,72 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { CodeEditor } from '../CodeEditor';
 import { ResultPanel } from '../ResultPanel';
+import { HintsPanel } from './HintsPanel';
+import { StuckNoteInput } from './StuckNoteInput';
 import { getPyodideClient } from '../../pyodide/client';
 import type { DatasetSource, PyStatus, RunResult } from '../../pyodide/types';
 import type { WriteOrFixProblem } from '../../problems/types';
+import {
+  finalizeCycle,
+  markOpened,
+  recordAnswerViewed,
+  recordHintOpened,
+  recordPredict,
+  recordStuckNote,
+  recordSubmitFailure,
+  saveDraftCode,
+  startReviewAttempt,
+} from '../../records/progressStore';
+import { useWorkingTime } from '../../records/workTime';
+import { logEvent } from '../../records/eventLog';
+import { STATE_LABELS } from '../../records/stateLabels';
+import type { ProblemProgress } from '../../records/types';
 import './ProblemView.css';
 
 interface Props {
+  setId: string;
   problem: WriteOrFixProblem;
   datasets: DatasetSource[];
 }
 
-function draftKey(problemId: string) {
-  return `kenshou-lab:draft:${problemId}`;
-}
+export function WriteFixProblemView({ setId, problem, datasets }: Props) {
+  const [searchParams] = useSearchParams();
+  const isReview = searchParams.get('review') === '1';
 
-function loadDraft(problem: WriteOrFixProblem): string {
-  try {
-    return localStorage.getItem(draftKey(problem.id)) ?? problem.starterCode;
-  } catch {
-    return problem.starterCode;
-  }
-}
-
-export function WriteFixProblemView({ problem, datasets }: Props) {
-  const [code, setCode] = useState(() => loadDraft(problem));
+  const [progress, setProgress] = useState<ProblemProgress | null>(null);
+  const [code, setCode] = useState(problem.starterCode);
   const [predictText, setPredictText] = useState('');
-  const [predictSubmitted, setPredictSubmitted] = useState(false);
+  const [predictLocked, setPredictLocked] = useState(false);
   const [result, setResult] = useState<RunResult | null>(null);
   const client = getPyodideClient();
   const [status, setStatus] = useState<PyStatus>(() => client.getStatus());
+  const [confirmingAnswer, setConfirmingAnswer] = useState(false);
 
+  useWorkingTime(setId, problem.id);
   useEffect(() => client.onStatus(setStatus), [client]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(draftKey(problem.id), code);
-    } catch {
-      // 保存できなくても実行は継続できるため無視する
-    }
-  }, [code, problem.id]);
+    void (async () => {
+      let p = await markOpened(setId, problem.id);
+      if (isReview && p.reviewStage >= 1 && p.reviewStage <= 4) {
+        p = await startReviewAttempt(setId, problem.id, problem.starterCode);
+      }
+      setProgress(p);
+      setCode(p.code ?? problem.starterCode);
+      setPredictText(p.predictAnswer ?? '');
+      setPredictLocked(Boolean(p.predictAnswer));
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setId, problem.id]);
+
+  if (!progress) {
+    return <div className="problem-view">読み込み中…</div>;
+  }
 
   const isBusy = status.phase === 'loading' || status.phase === 'running' || status.phase === 'restarting';
-  const predictRequired = problem.predict?.required && !predictSubmitted;
-  const blockedByPredict = Boolean(predictRequired) && predictText.trim().length === 0;
+  const predictRequired = Boolean(problem.predict?.required) && !predictLocked;
+  const blockedByPredict = predictRequired && predictText.trim().length === 0;
 
   const runOptions = {
     code,
@@ -52,26 +75,69 @@ export function WriteFixProblemView({ problem, datasets }: Props) {
     timeoutSec: problem.timeoutSec,
   };
 
+  const persistCode = (next: string) => {
+    setCode(next);
+    void saveDraftCode(setId, problem.id, next);
+  };
+
+  const lockPredictIfNeeded = async () => {
+    if (!predictLocked && predictText.trim().length > 0) {
+      setPredictLocked(true);
+      await recordPredict(setId, problem.id, predictText);
+    }
+  };
+
   const handleRun = async () => {
     if (blockedByPredict) return;
-    setPredictSubmitted(true);
+    await lockPredictIfNeeded();
+    await logEvent(setId, problem.id, 'run');
     const r = await client.run(runOptions);
     setResult(r);
+    if (r.error) await logEvent(setId, problem.id, 'error', { name: r.error.name });
   };
 
   const handleSubmit = async () => {
     if (blockedByPredict) return;
-    setPredictSubmitted(true);
+    await lockPredictIfNeeded();
+    await logEvent(setId, problem.id, 'submit');
     const r = await client.run({ ...runOptions, tests: problem.tests });
     setResult(r);
+    if (r.error) await logEvent(setId, problem.id, 'error', { name: r.error.name });
+    if (r.allPassed === true) {
+      const outcome = progress.hintsOpenedCount > 0 || progress.answerViewed ? 'needed_help' : 'clean';
+      const next = await finalizeCycle(setId, problem.id, outcome);
+      setProgress(next);
+    } else if (r.allPassed === false) {
+      const reason = r.ok ? 'assertion_failed' : 'runtime_error';
+      const next = await recordSubmitFailure(setId, problem.id, reason);
+      setProgress(next);
+    }
   };
 
   const handleResetCode = () => {
-    setCode(problem.starterCode);
+    persistCode(problem.starterCode);
   };
+
+  const handleOpenHint = async (index: number) => {
+    const next = await recordHintOpened(setId, problem.id, index);
+    setProgress(next);
+  };
+
+  const failThreshold = problem.answerUnlockAfterFails ?? 3;
+  const answerUnlocked =
+    progress.hintsOpenedCount >= problem.hints.length || progress.failCount >= failThreshold;
+
+  const handleViewAnswer = async () => {
+    const next = await recordAnswerViewed(setId, problem.id);
+    setProgress(next);
+    setConfirmingAnswer(false);
+  };
+
+  const showStuckNote = progress.state === 'cleared_alone' || progress.state === 'cleared_by_review' || progress.answerViewed;
 
   return (
     <div className="problem-view">
+      <div className="problem-view__state-badge">{STATE_LABELS[progress.state]}</div>
       {problem.predict && (
         <div className="problem-view__predict">
           <label htmlFor="predict-input">
@@ -82,12 +148,13 @@ export function WriteFixProblemView({ problem, datasets }: Props) {
             value={predictText}
             onChange={(e) => setPredictText(e.target.value)}
             rows={2}
+            disabled={predictLocked}
           />
         </div>
       )}
       <div className="problem-view__body">
         <div className="problem-view__editor">
-          <CodeEditor value={code} onChange={setCode} ariaLabel="コード入力欄" />
+          <CodeEditor value={code} onChange={persistCode} ariaLabel="コード入力欄" />
           <div className="problem-view__actions">
             <button type="button" onClick={handleRun} disabled={isBusy || blockedByPredict}>
               実行
@@ -99,22 +166,62 @@ export function WriteFixProblemView({ problem, datasets }: Props) {
               初期コードに戻す
             </button>
           </div>
-          {blockedByPredict && (
-            <p className="problem-view__note">先に上の予想欄を入力してください。</p>
-          )}
+          {blockedByPredict && <p className="problem-view__note">先に上の予想欄を入力してください。</p>}
         </div>
         <div className="problem-view__result">
           <ResultPanel result={result} status={status} />
-          {problem.predict && predictSubmitted && result && !result.timedOut && (
+          {problem.predict && predictLocked && result && !result.timedOut && (
             <div className="problem-view__predict-compare">
-              <div className="problem-view__predict-compare-col">
-                <div className="result-block__title">あなたの予想</div>
-                <pre className="result-pre">{predictText || '(未入力)'}</pre>
-              </div>
+              <div className="result-block__title">あなたの予想</div>
+              <pre className="result-pre">{predictText || '(未入力)'}</pre>
             </div>
           )}
         </div>
       </div>
+
+      <HintsPanel hints={problem.hints} openedCount={progress.hintsOpenedCount} onOpenNext={() => handleOpenHint(progress.hintsOpenedCount)} />
+
+      {progress.answerViewed ? (
+        <div className="problem-view__answer-reveal">
+          <div className="problem-view__block-title">解答</div>
+          <pre className="result-pre">{problem.modelAnswer}</pre>
+          {problem.modelExplanation?.map((e, i) => (
+            <p key={i} className="problem-view__model-text">
+              {e.lines[0]}〜{e.lines[1]}行目: {e.text}
+            </p>
+          ))}
+        </div>
+      ) : (
+        answerUnlocked && (
+          <div className="problem-view__answer-reveal">
+            {!confirmingAnswer ? (
+              <button type="button" onClick={() => setConfirmingAnswer(true)}>
+                解答を見る
+              </button>
+            ) : (
+              <>
+                <p>解答を見るとこの問題は復習に回ります。よろしいですか？</p>
+                <div className="problem-view__actions">
+                  <button type="button" onClick={handleViewAnswer}>
+                    解答を見る
+                  </button>
+                  <button type="button" className="problem-view__reset" onClick={() => setConfirmingAnswer(false)}>
+                    やめる
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )
+      )}
+
+      {showStuckNote && (
+        <StuckNoteInput
+          emphasize={progress.state !== 'cleared_alone'}
+          initialValue={progress.stuckNote}
+          onSave={(note) => void recordStuckNote(setId, problem.id, note)}
+        />
+      )}
     </div>
   );
 }

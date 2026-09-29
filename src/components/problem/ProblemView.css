@@ -176,3 +176,64 @@
   margin: 0;
   white-space: pre-wrap;
 }
+
+.problem-view__hints,
+.problem-view__answer-reveal,
+.problem-view__stuck-note {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.problem-view__hint-text {
+  margin: 0;
+  background: var(--code-bg);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.problem-view__hint-button,
+.problem-view__answer-reveal button,
+.problem-view__stuck-note button {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.problem-view__answer-reveal button:disabled,
+.problem-view__stuck-note button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.problem-view__stuck-note textarea {
+  font-size: 16px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: inherit;
+}
+
+.problem-view__stuck-note--emphasize {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.problem-view__state-badge {
+  display: inline-block;
+  font-size: 0.8rem;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--code-bg);
+}
